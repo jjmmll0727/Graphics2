@@ -65,7 +65,7 @@ def order_points(pts):
 # 네변을 그려주고 꼭짓점을 찍은후, 투영변환까지 해주는 함수
 def drawlingCorrectly(img_canny):
 
-    src = cv2.imread('card1.jpg')
+    src = cv2.imread('card2.jpg')
 
     resized = cv2.resize(src, dsize=(640,480), interpolation=cv2.INTER_AREA)
     #src = grabcut(resized)
@@ -218,7 +218,7 @@ def drawlingCorrectly(img_canny):
     '''
 
 def main():
-    ori_img = cv2.imread('card1.jpg')
+    ori_img = cv2.imread('card2.jpg')
     resized = cv2.resize(ori_img, dsize=(640, 480), interpolation=cv2.INTER_AREA) # 영상의 사이즈가 너무 커서 조정함
 
     cv2.imshow('resize', resized)

@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-clicked = []
+clicked = [] #마우스 포인터 위치 저장 --> grabcut 할때 씌여 (일반화를 위해)
 
-fileName = "unnamed4.jpg"
+fileName = "unnamed2.jpg"
 
 # 스페이스 바 대기
 def wait():
@@ -12,13 +12,30 @@ def wait():
         wait = cv2.waitKey(0)
         print(wait)
 
+def mouse_handler(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONUP:
+        clicked.append([x, y])
+        print(clicked)
+def mousePointer(resized):
+    cv2.namedWindow("mousePointer")
+    cv2.setMouseCallback("mousePointer", mouse_handler, param = resized)
+
+    while True:
+        cv2.imshow("mousePointer", resized)
+        k = cv2.waitKey(1) & 0xFF
+
+        if k == 32:
+            break
+    #cv2.destroyAllWindows()
+
 # 명함 바깥부분에 직선형태의 shape이 있어서 다 제거해주기 위해 grabcut을 함
 def grabcut(resized):
     mask = np.zeros(resized.shape[:2], np.uint8)
 
     bgdModel = np.zeros((1, 65), np.float64)
     fgdModel = np.zeros((1, 65), np.float64)
-    rect = (60, 60, 560, 460) #명함을 다 포함할수 있는 수평 수직의 직사각형의 좌상 우하 꼭짓점
+    height, width, channel = resized.shape
+    rect = (clicked[0][0], clicked[0][1], clicked[1][0], clicked[1][1]) #명함을 다 포함할수 있는 수평 수직의 직사각형의 좌상 우하 꼭짓점
     cv2.grabCut(resized, mask, rect, bgdModel, fgdModel, 5, cv2.GC_INIT_WITH_RECT)
 
     mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
@@ -83,6 +100,7 @@ def drawlingCorrectly(img_canny):
     approx = approx.reshape(4,2)
     (topLeft, topRight, bottomRight, bottomLeft) = approx
 
+    '''
     w1 = abs(bottomRight[0] - topRight[0])
     w2 = abs(topLeft[0] - bottomLeft[0])
     h1 = abs(topLeft[1] - topRight[1])
@@ -90,10 +108,10 @@ def drawlingCorrectly(img_canny):
 
     maxWidth = max([w1, w2])
     maxHeight = max([h1, h2])
+    '''
 
-
-    # 3. 전단계에서 추출한 네 선분을 이용하여 명함영역의 네 꼭지점을 계산한다.
-        # 4좌표를 sorting 하고 4좌표끼리의 대소비교를 하여 src에 대입한다. jpg 파일마다 순서가 바뀌므로 sorting해서 일반화를 해야해
+    #   3.전단계에서 추출한 네 선분을 이용하여 명함영역의 네 꼭지점을 계산한다.
+    #   4좌표를 sorting 하고 4좌표끼리의 대소비교를 하여 src에 대입한다. jpg 파일마다 순서가 바뀌므로 sorting해서 일반화를 해야해
 
     # 투영변횐
     src = []
@@ -104,7 +122,7 @@ def drawlingCorrectly(img_canny):
     src.append([float(bottomLeft[0]), float(bottomLeft[1])])
 
     src.sort(key = lambda x:x[0]) #이차원배열을 x성분을 기준으로 sort
-    src_tmp = [] # 좌상, 좌하, 우상, 우하 순서대로 sorting 해서 저장
+    src_tmp = [] # 좌상, 좌하, 우상, 우하 순서대로 sorting 해서 저장 .. 이게 real src
 
     # 가장 작은 두 x값에 해당되는 좌표의 y값들을 비교
     if src[0][1] < src[1][1]: #sort의 두번째 원소의 y값이 더 큰 경우
@@ -126,14 +144,14 @@ def drawlingCorrectly(img_canny):
     cv2.circle(dst, (int(src_tmp[0][0]), int(src_tmp[0][1])), 4, (0, 0, 0), -1)
     cv2.circle(dst, (int(src_tmp[1][0]), int(src_tmp[1][1])), 4, (255, 0, 255), -1)
     cv2.circle(dst, (int(src_tmp[2][0]), int(src_tmp[2][1])), 4, (0, 255, 255), -1)
-    cv2.circle(dst, (int(src_tmp[3][0]), int(src_tmp[3][1])), 4, (230, 220, 0), -1)
+    cv2.circle(dst, (int(src_tmp[3][0]), int(src_tmp[3][1])), 4, (100, 100, 0), -1)
 
     # 추출된 네변(선분), (즉, 좌, 우, 상, 하단 )의 기울기, y 절편, 양끝점의 좌표을 각각 출력할 것.
     pos1 = [0, 3]
     pos2 = [1, 2]
     for first in pos1:
         for second in pos2:
-            a = (src_tmp[first][0]-src_tmp[second][1])/(src_tmp[first][1]-src_tmp[second][1])   # 기울기
+            a = (src_tmp[first][1]-src_tmp[second][1])/(src_tmp[first][0]-src_tmp[second][0])   # 기울기
             b = (-a)*src_tmp[first][0] + src_tmp[first][1]  # 절편
             print("# 기울기 : ", a, "   절편 : ", b, "    양 끝점 : ", src_tmp[first], src_tmp[second])
 
@@ -144,6 +162,13 @@ def drawlingCorrectly(img_canny):
     print("좌하단 꼭지점 : ", src_tmp[1])
     print("우상단 꼭지점 : ", src_tmp[2])
     print("우하단 꼭지점 : ", src_tmp[3])
+
+    w1 = abs(src_tmp[0][0] - src_tmp[2][0])
+    w2 = abs(src_tmp[1][0] - src_tmp[3][0])
+    h1 = abs(src_tmp[0][1] - src_tmp[1][1])
+    h2 = abs(src_tmp[2][1] - src_tmp[3][1])
+    maxWidth = int(max([w1, w2]))
+    maxHeight = int(max([h1, h2]))
 
     src_np = np.array(src_tmp, dtype=np.float32)
 
@@ -178,8 +203,9 @@ def main():
     # 영상의 사이즈가 너무 커서 조정함
 
     # 0. 원본 이미지
-    cv2.imshow('resize', resized)
-    wait()
+    #cv2.imshow('resize', resized)
+    mousePointer(resized)
+
 
     # 1. 원본 + 에지 출력
     img_canny = canny(grabcut(resized))
