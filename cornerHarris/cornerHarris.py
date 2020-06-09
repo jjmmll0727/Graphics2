@@ -6,7 +6,7 @@ img = cv2.imread(filename)
 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
 gray = np.float32(gray)
-dst = cv2.cornerHarris(gray,7,11,0.01)
+dst = cv2.cornerHarris(gray,7,11,0.04)
 # ksize 가 클수록 특징점으로 추출되는 값이 많아져
 # k가 작을수록 더 많이 추출된다
 # block size가 클수록 더 많이 추출된다
@@ -19,5 +19,6 @@ dst = cv2.dilate(dst,None)
 img[dst>0.01*dst.max()]=[0,0,255]
 
 cv2.imshow('dst',img)
-if cv2.waitKey(0) & 0xff == 27:
-    cv2.destroyAllWindows()
+cv2.waitKey()
+# if cv2.waitKey(0) & 0xff == 27:
+#     cv2.destroyAllWindows()
