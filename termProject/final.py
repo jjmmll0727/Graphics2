@@ -1,97 +1,147 @@
-import cv2
 import numpy as np
+import cv2
 
-model_img = cv2.imread('mode_shapes.jpg', cv2.IMREAD_GRAYSCALE)
-point1 = ()
-point2 = ()
-drawing = False
-model_areas = []       # 모델 도형들의 좌표를 담음
-model_feature_descriptors = []
+# 사용환경 : opencv-contrib-python -3.4.2.17 version
+# 사용법 : 객체를 드레그한 뒤 스페이스바를 누른다.
+#        동영상 재생될때 q누르면 종료 s누르면 다른 객체 식별.
 
-def mouse_drawing(event, x, y, flags, params) :
-    global point1, point2, drawing
-    if event == cv2.EVENT_LBUTTONUP :
-        if drawing is False :
-            drawing = True
-            point1 = (x, y)
-            point2 = None
-        else :
-            point2 = (x, y)
-            drawing = False
-            NW = point1
-            SE = point2
-            # NE = (point2[0], point1[1])
-            # SW = (point1[0], point2[1])
-            model_areas.append([NW, SE])
+errorcode = 0
+cnt = 0
+model_img = cv2.imread("C:/Users/jjmml/Desktop/models.jpg", cv2.IMREAD_GRAYSCALE)
+model_img = cv2.resize(model_img, dsize=(800, 800), interpolation=cv2.INTER_AREA)
+
+def select(cap):
+    global errorcode
+    global cnt
+    tracker = cv2.TrackerMOSSE_create()
+    ret, img = cap.read()
+    cv2.namedWindow('Select Window')
+
+    cv2.putText(img, 'Usage: Drag Mouse and Press a Spacebar', (10, 30), cv2.FONT_ITALIC, 1, (35, 30, 100), 2,
+                cv2.LINE_AA)
+    cv2.putText(img, 'Esc: Exit', (10, 70), cv2.FONT_ITALIC, 1, (35, 30, 100), 2, cv2.LINE_AA)
+
+    cv2.imshow('Select Window', img)
+
+    # select ROI #### rect = (왼쪽 좌표(x좌표), 위쪽 좌표(y좌표), 너비, 높이)로 구성
+    rect = cv2.selectROI('Select Window', img, fromCenter=False, showCrosshair=False)
+    # rect부분 이미지 출력
+    dst = img.copy()
+    dst = img[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]  # 이미지 자르기
+    # cv2.imshow('blue',dst)
+
+    cv2.destroyWindow('Select Window')
+
+    # initialize tracker
+    try:
+        tracker.init(img, rect)
+        print(tracker)
+    except:
+        cv2.destroyAllWindows()
+        cap.release()
+    return tracker, dst, rect[2], rect[3]
 
 
-# 모델영상에서 특징점 검출하는 함수
-def get_model_feature_descriptor():
-    # mouse_handler 함수로 입력받은 영역 내부의 도형에 대해 특징기술자를 추출
-    cv2.namedWindow("MODEL")
-    cv2.setMouseCallback("MODEL", mouse_drawing)
+def ORB(model_img, cap):
+    global errorcode
+    global cnt
     while True:
-        model_img_tmp = model_img
-        if point1 and point2:
-            cv2.rectangle(model_img_tmp, point1, point2, (0, 255, 0))
-        cv2.imshow("MODEL", model_img_tmp)
-        if cv2.waitKey(1) == 27:
-            print(model_areas)
-            break
+        img1 = model_img  # queryImage
+        _, img2 = cap.read()  # trainImage
 
-    for i in range(len(model_areas)):
-        roi = model_img[model_areas[i][0][1]+3:model_areas[i][1][1], model_areas[i][0][0]+3:model_areas[i][1][0]]
-        # cv2.imshow("roi", roi)      # 모델 영상에서 각 도형 부분만 하나씩 떼서 나옴.
-        #                             # 3씩 더한 이유는 안더했더니 cv2.rectangle로 그렸던 선까지 같이 나와서
-        # cv2.waitKey()
-        ############################### 여기서부터 특징점 검출 알고리즘 ##################################
-        # 1. for문을 도는 roi가 모델 떼어넨것. sift / orb / surf 등등 써서 특징점 검출해야함
-        # 2. model_feature_descriptior 배열에 특징벡터 담아주세요
+        # Initiate SURF detector
+        #surf = cv2.xfeatures2d.SURF_create()
+        orb = cv2.ORB_create()
+        #orb.setHessianThreshold(400)
+        # find the keypoints and descriptors with SIFT
+        kp1, des1 = orb.detectAndCompute(img1, None)
+        kp2, des2 = orb.detectAndCompute(img2, None)
 
-        ##########################################################################################
+        # FLANN parameters
+        FLANN_INDEX_KDTREE = 1
+        index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+        search_params = dict(checks=50)  # or pass empty dictionary
 
+        flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-# 캠화면(동영상)에서 특징점 검출하는 함수
-def get_target_feature_descriptor():
-    # 캠 영상을 입력받아 영상의 특징기술자를 추출
-    cap = cv2.VideoCapture(0)
-    while True:
-        _, frame = cap.read()
-        ################################# 여기서부터 특징점 검출 알고리즘 #################################
-        # 1. 특징점 검출
-            # 2. 매칭 => 함수 matching()
-        # 3. 좌측 상단에 매칭된 도형 개수 출력
-        ###########################################################################################
+        try:
+            matches = flann.knnMatch(des1, des2, k=2)
+            # Need to draw only good matches, so create a mask
+            matchesMask = [[0, 0] for i in range(len(matches))]
+            # ratio test as per Loew's paper
+            for i, (m, n) in enumerate(matches):
+                if m.distance < 0.7 * n.distance:
+                    matchesMask[i] = [1, 0]
 
-        cv2.imshow("Frame", frame)
-
-        key = cv2.waitKey(1)
-        if key == 27:
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-def matching():
-    # 두 특징기술자(벡터들)을 비교하여 매칭여부 판단
-    # 매칭된 도형은 마커로 마킹, 좌상단에 검출된 도형의 갯수를 입력
-    pass
-
-def main():
-    ############################################################
-    # 입력 영상 최적화 할거면 여기서
-    ############################################################
-    get_model_feature_descriptor()     # 1. 입력모델(mode_shapes.jpg, 'l'오타남)에서 특징점 검출 -> model_feature_descriptors 배열에 저장
-    # get_target_feature_descriptor()    # 2. 캠영상 입력받아서 실시간으로 특징점 검출
-
-main()
+            draw_params = dict(matchColor=(0, 0, 255),
+                               singlePointColor=(255, 0, 0),
+                               matchesMask=matchesMask,
+                               flags=0)
+            img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, matches, None, **draw_params)
+            print(matchesMask)
+            return img3
+        except:
+            errorcode = 1
+            cnt = 1
+            # cv2.putText(img,'nothing',(10,30),cv2.FONT_ITALIC,1,(0,0,255),2,cv2.LINE_AA)
+            # cap.release()
+            return 1
 
 
-# 한거
-# 1. 모델영상에서 특징점 검출 알고리즘 돌릴 roi 분리 (마우스로 좌상단 / 우하단 클릭하면 직사각형 생김)
-# 2.
+# open video file
+video_path = "models_moving.mp4"
+cap = cv2.VideoCapture(video_path)
 
 
-# 해야할 작업
-# 1. 모델영상에서 특징기술자 검출해서 각 특징기술자가 어떤 도형에 해당되는지 미리 매핑(db화)
-# 2. 빈 코드 채우기  
+# global variables
+
+count = 0
+
+tracker, dst, num1, num2 = select(cap)
+output_size = (num1 + 100, num2 + 100)  # result_img 의 가로, 세로 크기 조정
+
+
+while True:
+    count += 1
+    # read frame from video
+    ret, img = cap.read()
+    ORB(model_img, cap)
+
+    if not ret:
+        break
+
+        # update tracker and get position from new frame
+    success, box = tracker.update(img)
+
+    # if success:
+    left, top, w, h = [int(v) for v in box]
+    right = left + w
+    bottom = top + h
+    center = (int(left + w / 2), int(top + h / 2))
+    radian = (int(w / 2), int(h / 2))
+
+    cv2.ellipse(img, center, radian, 0, 0, 360, (0, 255, 255), 3)
+
+
+    cv2.imshow('playing', img)
+    #cv2.imshow('result', result_img)
+    #img3 = ORB(dst, result_img)
+
+    try:
+        if errorcode == 0 and cnt == 0:
+            # cv2.imshow('img3', img3)
+            print("gggggggggggggg")
+        else:
+            cv2.destroyWindow('matching')
+    except:
+        break
+
+    key = cv2.waitKey(1)
+
+# release everything
+cv2.destroyAllWindows()
+cap.release()
+
+
+
+
