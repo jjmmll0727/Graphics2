@@ -59,7 +59,7 @@ def matching(factor) :
                 res = cv2.drawMatches(roi, kp1, frame, kp2, good, res, None, flags=2)
         cv2.imshow('Feature Matching', res)
         cv2.waitKey(1)
-        cv2.destroyAllWindows()
+        #cv2.destroyAllWindows()
 
 
 def main():
