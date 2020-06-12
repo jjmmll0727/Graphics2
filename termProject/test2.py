@@ -47,8 +47,8 @@ def get_model_feature_descriptor():
         kp, des = orb.detectAndCompute(roi, None)
 
         model_feature_descriptors.append(des)
-        print(model_feature_descriptors)
-        print(roi_list)
+        print("model : ", model_feature_descriptors)
+        print("roilist : ", roi_list)
         key = cv2.waitKey(1)
 
 ###### 특징벡터 배열과 cap이미지를 비교매칭해야 한다. 그래서 매칭을 하면 매칭점만을 cap화면에 보여주게 하자 일단
