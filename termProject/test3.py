@@ -5,6 +5,8 @@ model_feature_descriptors = [] # 특징벡터를 저장하는 배열
 model_img = cv2.imread("test.png")
 video_path = "test.mp4"
 cap = cv2.VideoCapture(video_path)
+MIN_MATCH = 1
+dst_pts = []
 # img1 = model_img
 #
 # orb = cv2.ORB_create(nfeatures=1000)
@@ -35,7 +37,8 @@ def matching(factor) :
                         table_number=6,
                         key_size=12,
                         multi_probe_level=1)
-    search_params = dict(checks=50)
+    search_params = dict(checks=40)
+    global dst_pts
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -49,14 +52,24 @@ def matching(factor) :
                 FLANN_INDEX_KDTREE = 0
 
                 good = []
+                ratio = 0.50
+
                 flann = cv2.FlannBasedMatcher(index_params, search_params)
                 matches = flann.knnMatch(des1, des2, k=2)
+                good_matches = [m[0] for m in matches \
+                                if len(m) == 2 and m[0].distance < m[1].distance * ratio]
+                if len(good_matches) > MIN_MATCH * 1:
+                    dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches])  # 매칭시켜야 하는 물체의 좌표
+
+                for i in range(len(dst_pts)):  ###### roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어준다.
+                    res = cv2.circle(frame, tuple(dst_pts[i]), 3, (0, 255, 0), -1)
+                '''
                 if matches is not None:
                     for m, n in matches:
                         if m.distance < factor*n.distance:
                             good.append(m)
-
-                res = cv2.drawMatches(roi, kp1, frame, kp2, good, res, None, flags=2)
+                '''
+                #res = cv2.drawMatches(roi, kp1, frame, kp2, good, res, None, flags=2)
         cv2.imshow('Feature Matching', res)
         cv2.waitKey(1)
         #cv2.destroyAllWindows()
