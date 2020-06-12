@@ -31,23 +31,26 @@ def get_model_feature_descriptor():
     #cv2.namedWindow("MODEL")
     global model_feature_descriptors
     cap = cv2.VideoCapture(video_path)
-    for i in range(4):
-        rect = cv2.selectROI('model_img', model_img, fromCenter=False, showCrosshair=False)
-        #model_img_tmp = cv2.cvtColor(model_img, cv2.COLOR_BGR2GRAY)
-        tracker = cv2.TrackerMOSSE_create()
+    while True:
+        try:
+            rect = cv2.selectROI('model_img', model_img, fromCenter=False, showCrosshair=False)
+            #model_img_tmp = cv2.cvtColor(model_img, cv2.COLOR_BGR2GRAY)
+            tracker = cv2.TrackerMOSSE_create()
 
-        roi = model_img[rect[1]:rect[1]+rect[3], rect[0]:rect[0]+rect[2]]
-        cv2.imshow("roi", roi)
+            roi = model_img[rect[1]:rect[1]+rect[3], rect[0]:rect[0]+rect[2]]
+            cv2.imshow("roi", roi)
 
-        roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        roi_list.append(roi) # roi를 저장할때 grayscale인 상태이다,
-        orb = cv2.ORB_create()
-        kp, des = orb.detectAndCompute(roi, None)
+            roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+            roi_list.append(roi) # roi를 저장할때 grayscale인 상태이다,
+            orb = cv2.ORB_create()
+            kp, des = orb.detectAndCompute(roi, None)
 
-        model_feature_descriptors.append(des)
-        print("model : ", model_feature_descriptors)
-        print("roilist : ", roi_list)
-        key = cv2.waitKey(1)
+            model_feature_descriptors.append(des)
+            print("model : ", model_feature_descriptors)
+            print("roilist : ", roi_list)
+            key = cv2.waitKey(1)
+        except:
+            break
 
 # 특징벡터 배열과 cap이미지를 비교매칭해야 한다. 그래서 매칭을 하면 매칭점만을 cap화면에 보여주게 하자 일단
 def matching():
