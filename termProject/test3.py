@@ -1,4 +1,5 @@
 import cv2, numpy as np
+import random
 
 roi_list = list()
 model_feature_descriptors = [] # 특징벡터를 저장하는 배열
@@ -8,6 +9,7 @@ cap = cv2.VideoCapture(video_path)
 MIN_MATCH = 1
 dst_pts = []
 shape = []
+model_color = 0
 
 # img1 = model_img
 #
@@ -41,6 +43,7 @@ def matching(factor) :
                         multi_probe_level=1)
     search_params = dict(checks=40)
     global dst_pts
+    global model_color
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -48,7 +51,11 @@ def matching(factor) :
             res = frame
         else :
             cnt = 0            # for문을 roi로 돌리길래 인덱스 벡터 cnt
+            #model_color = model_color + 1
             for roi in roi_list:
+                print(roi_list.index(roi))
+                print("^^^^^^^^^")
+                model_color = random.randrange(1,7)
                 res = None
                 kp1, des1 = orb.detectAndCompute(roi, None)
                 kp2, des2 = orb.detectAndCompute(frame, None)
@@ -72,7 +79,9 @@ def matching(factor) :
 
                 for i in range(len(dst_pts)):  ###### roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어준다.
                     # res = cv2.circle(frame, tuple(dst_pts[i]), 3, (0, 255, 0), -1)
-                    res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 5, (0, 255, 0), -1)
+                    res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 5, (0, (roi_list.index(roi)+1)*30, (roi_list.index(roi)+1)*10), -1)
+                    print("$$$$$$$$$$$");
+                    print(model_color)
                 '''
                 if matches is not None:
                     for m, n in matches:
