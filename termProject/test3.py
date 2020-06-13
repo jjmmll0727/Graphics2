@@ -4,12 +4,16 @@ import random
 roi_list = list()
 model_feature_descriptors = [] # 특징벡터를 저장하는 배열
 model_img = cv2.imread("test.png")
+#model_img = cv2.resize(model_img, dsize=(480, 640), interpolation=cv2.INTER_AREA)
 video_path = "test.mp4"
 cap = cv2.VideoCapture(video_path)
 MIN_MATCH = 1
 dst_pts = []
 shape = []
-model_color = 0
+colors = [(0,0,255), (0,255,0), (255,0,0), (255,255,0), (100,0,100), (200,200,200), (0,0,50)]
+cap_count = 0
+cap_count_list = []
+
 
 # img1 = model_img
 #
@@ -41,21 +45,26 @@ def matching(factor) :
                         table_number=6,
                         key_size=12,
                         multi_probe_level=1)
-    search_params = dict(checks=40)
+    search_params = dict(checks=100)
     global dst_pts
-    global model_color
+    global cap_count
+    global cap_count_list
+
+
 
     while cap.isOpened():
+
         ret, frame = cap.read()
         if roi_list[0] is None:  # 등록된 이미지 없음, 카메라 바이패스
             res = frame
         else :
+            cap_count = 1
             cnt = 0            # for문을 roi로 돌리길래 인덱스 벡터 cnt
             #model_color = model_color + 1
             for roi in roi_list:
+
+                print("^^^^^^^^^^^^")
                 print(roi_list.index(roi))
-                print("^^^^^^^^^")
-                model_color = random.randrange(1,7)
                 res = None
                 kp1, des1 = orb.detectAndCompute(roi, None)
                 kp2, des2 = orb.detectAndCompute(frame, None)
@@ -66,7 +75,7 @@ def matching(factor) :
                 matches = flann.knnMatch(des1, des2, k=2)
                 good_matches = [m[0] for m in matches \
                                 if len(m) == 2 and m[0].distance < m[1].distance * ratio]
-                if len(good_matches) > MIN_MATCH * 1:
+                if len(good_matches) > MIN_MATCH * 3:
                     dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches])  # 매칭시켜야 하는 물체의 좌표
 
                 mean_point = np.mean(dst_pts, axis=0)
@@ -79,9 +88,8 @@ def matching(factor) :
 
                 for i in range(len(dst_pts)):  ###### roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어준다.
                     # res = cv2.circle(frame, tuple(dst_pts[i]), 3, (0, 255, 0), -1)
-                    res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 5, (0, (roi_list.index(roi)+1)*30, (roi_list.index(roi)+1)*10), -1)
-                    print("$$$$$$$$$$$");
-                    print(model_color)
+                    res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 5, (colors[roi_list.index(roi)]), -1)
+
                 '''
                 if matches is not None:
                     for m, n in matches:
@@ -90,6 +98,7 @@ def matching(factor) :
                 '''
                 #res = cv2.drawMatches(roi, kp1, frame, kp2, good, res, None, flags=2)
                 cnt += 1
+            cap_count = 2
         cv2.imshow('Feature Matching', res)
         cv2.waitKey(1)
         #cv2.destroyAllWindows()
