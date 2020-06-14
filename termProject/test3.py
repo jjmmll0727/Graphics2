@@ -4,10 +4,10 @@ import random
 
 roi_list = list()
 model_feature_descriptors = [] # 특징벡터를 저장하는 배열
-model_img = cv2.imread("test.png")
+model_img = cv2.imread("4.png")
 # model_img = cv2.GaussianBlur(model_img, (5, 5), 0)
-#model_img = cv2.resize(model_img, dsize=(480, 640), interpolation=cv2.INTER_AREA)
-video_path = "test.mp4"
+model_img = cv2.resize(model_img, dsize=(480, 640), interpolation=cv2.INTER_AREA)
+video_path = "4.mp4"
 cap = cv2.VideoCapture(video_path)
 MIN_MATCH = 1
 dst_pts = []
@@ -39,6 +39,7 @@ def get_model_feature_descriptor():
         tracker = cv2.TrackerMOSSE_create()
         roi = model_img[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
         roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        print(len(roi))
         return roi
     except:
         return []           # 아무것도 리턴 안돼서 len(roi)가 0이라 roi 지정 종료
@@ -56,6 +57,7 @@ def matching(factor) :
 
     while cap.isOpened():
         ret, frame = cap.read()
+        res = frame
         # frame = cv2.GaussianBlur(frame, (5, 5), 0)
         if roi_list[0] is None:  # 등록된 이미지 없음, 카메라 바이패스
             res = frame
@@ -66,12 +68,12 @@ def matching(factor) :
 
             for roi in roi_list:
                 print(cnt)
-                res = None
+                res = frame
                 # des1 = model_feature_descriptors[cnt]
                 kp1, des1 = orb.detectAndCompute(roi, None)
                 kp2, des2 = orb.detectAndCompute(frame, None)
 
-                ratio = 0.50
+                ratio = 0.75
 
                 flann = cv2.FlannBasedMatcher(index_params, search_params)
                 matches = flann.knnMatch(des1, des2, k=2)
@@ -87,10 +89,9 @@ def matching(factor) :
                 print("검출된 특징점 개수 : ", len(dst_pts))
 
                 for i in range(len(dst_pts)):  ###### roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어준다.
-                    res = cv2.circle(frame, tuple(dst_pts[i]), 3, colors[roi_list.index(roi)], -1)
-                    # res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[roi_list.index(roi)]), -1)
-                    cv2.imshow('Feature Matching', res)
-                    cv2.waitKey(1)
+                    if len(good_matches) > MIN_MATCH * 5 :
+#                        res = cv2.circle(frame, tuple(dst_pts[i]), 3, colors[roi_list.index(roi)], -1)
+                        res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[roi_list.index(roi)]), -1)
 
                 '''
                 if matches is not None:
