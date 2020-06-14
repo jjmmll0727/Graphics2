@@ -1,6 +1,6 @@
 import cv2, numpy as np
 import random
-
+## 푸시 다시할라고 추가함
 
 roi_list = list()
 model_feature_descriptors = [] # 특징벡터를 저장하는 배열
