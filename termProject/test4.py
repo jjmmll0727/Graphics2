@@ -1,5 +1,7 @@
-import cv2, numpy as np
+from cv2 import *
+import numpy as np
 import random
+import os
 ## 푸시 다시할라고 추가함
 
 roi_list = list()
@@ -7,7 +9,7 @@ model_feature_descriptors = [] # 특징벡터를 저장하는 배열
 model_img = cv2.imread("test.png")
 # model_img = cv2.GaussianBlur(model_img, (5, 5), 0)
 #model_img = cv2.resize(model_img, dsize=(480, 640), interpolation=cv2.INTER_AREA)
-video_path = "test.mp4"
+video_path = "./test.mp4"
 cap = cv2.VideoCapture(video_path)
 MIN_MATCH = 1
 dst_pts = []
@@ -39,17 +41,17 @@ def get_model_feature_descriptor():
         tracker = cv2.TrackerMOSSE_create()
         roi = model_img[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
         roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        print(len(roi))
         return roi
     except:
         return []           # 아무것도 리턴 안돼서 len(roi)가 0이라 roi 지정 종료
 
 def matching(factor) :
-    orb = cv2.ORB_create(num_features)
-    index_params = dict(algorithm=6,
-                        table_number=20,
-                        key_size=20,
-                        multi_probe_level=2)
-    search_params = dict(checks=100)
+    surf = cv2.xfeatures2d.SURF_create()
+#    surf.setHessianThreshold(100)
+    
+    index_params = dict(algorithm=1, trees = 3)
+    search_params = dict(checks=20)
     global dst_pts
     global cap_count
     global cap_count_list
@@ -68,16 +70,16 @@ def matching(factor) :
                 print(cnt)
                 res = None
                 # des1 = model_feature_descriptors[cnt]
-                kp1, des1 = orb.detectAndCompute(roi, None)
-                kp2, des2 = orb.detectAndCompute(frame, None)
+                kp1, des1 = surf.detectAndCompute(roi, None)
+                kp2, des2 = surf.detectAndCompute(frame, None)
 
-                ratio = 0.50
+                ratio = 0.7
 
                 flann = cv2.FlannBasedMatcher(index_params, search_params)
                 matches = flann.knnMatch(des1, des2, k=2)
                 good_matches = [m[0] for m in matches \
                                 if len(m) == 2 and m[0].distance < m[1].distance * ratio]
-                if len(good_matches) > MIN_MATCH * 3:
+                if len(good_matches) > MIN_MATCH * 30:
                     dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches])  # 매칭시켜야 하는 물체의 좌표
 
                 mean_point = np.mean(dst_pts, axis=0)
@@ -87,10 +89,9 @@ def matching(factor) :
                 print("검출된 특징점 개수 : ", len(dst_pts))
 
                 for i in range(len(dst_pts)):  ###### roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어준다.
-                    res = cv2.circle(frame, tuple(dst_pts[i]), 3, colors[roi_list.index(roi)], -1)
-                    # res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[roi_list.index(roi)]), -1)
-                    cv2.imshow('Feature Matching', res)
-                    cv2.waitKey(1)
+                    if len(good_matches) > MIN_MATCH * 30 :
+#                    res = cv2.circle(frame, tuple(dst_pts[i]), 3, colors[roi_list.index(roi)], -1)
+                        res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[roi_list.index(roi)]), -1)
 
                 '''
                 if matches is not None:
