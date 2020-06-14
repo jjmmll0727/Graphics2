@@ -1,18 +1,31 @@
 import cv2, numpy as np
 import random
+## 푸시 다시할라고 추가함
+
 
 roi_list = list()
 model_feature_descriptors = [] # 특징벡터를 저장하는 배열
+<<<<<<< HEAD
+model_img = cv2.imread("test3.png")
+=======
 model_img = cv2.imread("test.png")
+model_img = cv2.GaussianBlur(model_img, (5, 5), 0)
+<<<<<<< HEAD
+>>>>>>> 6b05d8f40f7dcef30e4fef55149168ccb206c123
+=======
+>>>>>>> 2c7322122d8b2bff34425cc614e1f6e897b2f0de
 #model_img = cv2.resize(model_img, dsize=(480, 640), interpolation=cv2.INTER_AREA)
-video_path = "test.mp4"
+video_path = "test3.mp4"
 cap = cv2.VideoCapture(video_path)
+_, model_img = cap.read()
 MIN_MATCH = 1
 dst_pts = []
 shape = []
 colors = [(0,0,255), (0,255,0), (255,0,0), (255,255,0), (100,0,100), (200,200,200), (0,0,50)]
 cap_count = 0
 cap_count_list = []
+
+num_features = 3500
 
 
 # img1 = model_img
@@ -40,33 +53,30 @@ def get_model_feature_descriptor():
         return []           # 아무것도 리턴 안돼서 len(roi)가 0이라 roi 지정 종료
 
 def matching(factor) :
-    orb = cv2.ORB_create(nfeatures=1500)
+    orb = cv2.ORB_create(num_features)
     index_params = dict(algorithm=6,
                         table_number=6,
                         key_size=12,
-                        multi_probe_level=1)
-    search_params = dict(checks=100)
+                        multi_probe_level=2)
+    search_params = dict(checks=130)
     global dst_pts
     global cap_count
     global cap_count_list
 
-
-
     while cap.isOpened():
-
         ret, frame = cap.read()
+        frame = cv2.GaussianBlur(frame, (5, 5), 0)
         if roi_list[0] is None:  # 등록된 이미지 없음, 카메라 바이패스
             res = frame
         else :
             cap_count = 1
             cnt = 0            # for문을 roi로 돌리길래 인덱스 벡터 cnt
             #model_color = model_color + 1
-            for roi in roi_list:
 
-                print("^^^^^^^^^^^^")
-                print(roi_list.index(roi))
+            for roi in roi_list:
+                print(cnt)
                 res = None
-                kp1, des1 = orb.detectAndCompute(roi, None)
+                des1 = model_feature_descriptors[cnt]
                 kp2, des2 = orb.detectAndCompute(frame, None)
 
                 ratio = 0.50
@@ -83,12 +93,10 @@ def matching(factor) :
 
                 ## 검출된 특징점 갯수가 일정 숫자 이상이면(지금은 3) 도형정보(shape 배열)랑 매칭해서 도형정보 기
                 print("검출된 특징점 개수 : ", len(dst_pts))
-                if len(dst_pts) > 3 :
-                    print(shape[cnt])
 
                 for i in range(len(dst_pts)):  ###### roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어준다.
-                    # res = cv2.circle(frame, tuple(dst_pts[i]), 3, (0, 255, 0), -1)
-                    res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 5, (colors[roi_list.index(roi)]), -1)
+                    res = cv2.circle(frame, tuple(dst_pts[i]), 3, colors[roi_list.index(roi)], -1)
+                    # res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[roi_list.index(roi)]), -1)
 
                 '''
                 if matches is not None:
@@ -134,9 +142,12 @@ def main():
 
     print("number of roi : ", cnt)
 
+    orb = cv2.ORB_create(num_features)
     # roi 영상에 코너가 몇개 있는지 검출
     for i in range(len(roi_list)):
         cornerHarris(roi_list[i], i)
+        _, des = orb.detectAndCompute(roi_list[i], None)
+        model_feature_descriptors.append(des)
 
     matching(0.7)
 
