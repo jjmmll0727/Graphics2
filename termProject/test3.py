@@ -19,19 +19,6 @@ cap_count_list = []
 
 num_features = 2000
 
-
-# img1 = model_img
-#
-# orb = cv2.ORB_create(nfeatures=1000)
-# keypoints, descriptors = orb.detectAndCompute(img1, None)
-#
-# img2 = cv2.drawKeypoints(img1, keypoints, None)
-#
-# cv2.imshow("kp", img2)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
-
-
 def get_model_feature_descriptor():
     try:
         rect = cv2.selectROI('model_img', model_img, fromCenter=False, showCrosshair=False)
@@ -70,8 +57,8 @@ def matching(factor) :
             for roi in roi_list:
                 print(cnt)
                 res = frame
-                # des1 = model_feature_descriptors[cnt]
                 kp1, des1 = orb.detectAndCompute(roi, None)
+                print(len(kp1))
                 kp2, des2 = orb.detectAndCompute(frame, None)
 
                 ratio = 0.75
@@ -82,7 +69,7 @@ def matching(factor) :
 
                 good_matches = [m[0] for m in matches \
                                 if len(m) == 2 and m[0].distance < m[1].distance * ratio]
-                print(good_matches)
+                # print(len(good_matches))
                 if len(good_matches) > MIN_MATCH * 3:
                     dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches])  # 매칭시켜야 하는 물체의 좌표
 
@@ -90,7 +77,12 @@ def matching(factor) :
                 # mean_y = np.mean(dst_pts, axis=1)
 
                 ## 검출된 특징점 갯수가 일정 숫자 이상이면(지금은 3) 도형정보(shape 배열)랑 매칭해서 도형정보 기
-                print("검출된 특징점 개수 : ", len(dst_pts))
+                # print("검출된 특징점 개수 : ", len(dst_pts))
+                # if len(dst_pts) < 160 :
+                #     print("circle")
+                # elif len(dst_pts) < 200 :
+                #     print("rectangle")
+                # print("done")
 
                 for i in range(len(dst_pts)):  ###### roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어준다.
                     if len(good_matches) > MIN_MATCH * 5 :
@@ -115,14 +107,7 @@ def cornerHarris(roi_input, i) :
     roi = np.float32(roi)
     dst = cv2.cornerHarris(roi, 3, 5, 0.07)
     dst = cv2.dilate(dst, None)
-    ret, dst = cv2.threshold(dst, 0.01*dst.max(), 255, 0)
-    dst = np.uint8(dst)
-
-    ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst)
-
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-    corners = cv2.cornerSubPix(roi, np.float32(centroids), (5,5),(-1,-1),criteria)
-    print("코너 갯수 : ", len(corners))     # 코너갯수로 물체 인식할 수도 있지 않을까..
+    print("코너 갯수 : ", len(dst))     # 코너갯수로 물체 인식할 수도 있지 않을까..
 
     ###### 검출된 코너 갯수에 따라서 다른 물체로 인식하도록 ####
     # shape 벡터에 순서대로 도형이름 저장
@@ -138,7 +123,6 @@ def cornerHarris(roi_input, i) :
 
 
 def main():
-    # 특징벡터 :
     cnt = 0
     while True:
         roi = get_model_feature_descriptor()
@@ -157,7 +141,7 @@ def main():
         # _, des = orb.detectAndCompute(roi_list[i], None)
         # model_feature_descriptors.append(des)
 
-    # matching(0.7)
+    matching(0.7)
 
 if __name__=="__main__":
     main()
