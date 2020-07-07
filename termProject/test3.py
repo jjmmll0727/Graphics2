@@ -110,10 +110,19 @@ def matching(factor) :
         cv2.waitKey(1)
         #cv2.destroyAllWindows()
 
-def cornerHarris(roi, i) :
+def cornerHarris(roi_input, i) :
+    roi = roi_input
+    roi = np.float32(roi)
     dst = cv2.cornerHarris(roi, 3, 5, 0.07)
     dst = cv2.dilate(dst, None)
-    print("코너 갯수 : ", len(dst))     # 코너갯수로 물체 인식할 수도 있지 않을까..
+    ret, dst = cv2.threshold(dst, 0.01*dst.max(), 255, 0)
+    dst = np.uint8(dst)
+
+    ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst)
+
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+    corners = cv2.cornerSubPix(roi, np.float32(centroids), (5,5),(-1,-1),criteria)
+    print("코너 갯수 : ", len(corners))     # 코너갯수로 물체 인식할 수도 있지 않을까..
 
     ###### 검출된 코너 갯수에 따라서 다른 물체로 인식하도록 ####
     # shape 벡터에 순서대로 도형이름 저장
@@ -148,7 +157,7 @@ def main():
         # _, des = orb.detectAndCompute(roi_list[i], None)
         # model_feature_descriptors.append(des)
 
-    matching(0.7)
+    # matching(0.7)
 
 if __name__=="__main__":
     main()
