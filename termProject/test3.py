@@ -19,6 +19,12 @@ cap_count_list = []
 
 num_features = 2000
 
+def read_data():
+    import json
+    with open("data.json", "r") as f:
+        ret = json.load(f)
+        return ret
+
 def get_model_feature_descriptor():
     try:
         rect = cv2.selectROI('model_img', model_img, fromCenter=False, showCrosshair=False)
@@ -33,6 +39,11 @@ def get_model_feature_descriptor():
         return []           # 아무것도 리턴 안돼서 len(roi)가 0이라 roi 지정 종료
 
 def matching(factor) :
+    data = read_data()
+    db_circle = data['circle']
+    db_rectangle = data['rectangle']
+    db_triangle = data['triangle']
+
     orb = cv2.ORB_create(num_features)
     index_params = dict(algorithm=6,
                         table_number=20,
@@ -54,11 +65,13 @@ def matching(factor) :
             cnt = 0            # for문을 roi로 돌리길래 인덱스 벡터 cnt
             #model_color = model_color + 1
 
+            count_circles = 0
+            count_rectangles = 0
+            count_triangles = 0
             for roi in roi_list:
                 print(cnt)
                 res = frame
                 kp1, des1 = orb.detectAndCompute(roi, None)
-                print(len(kp1))
                 kp2, des2 = orb.detectAndCompute(frame, None)
 
                 ratio = 0.75
@@ -77,17 +90,32 @@ def matching(factor) :
                 # mean_y = np.mean(dst_pts, axis=1)
 
                 ## 검출된 특징점 갯수가 일정 숫자 이상이면(지금은 3) 도형정보(shape 배열)랑 매칭해서 도형정보 기
-                # print("검출된 특징점 개수 : ", len(dst_pts))
-                # if len(dst_pts) < 160 :
-                #     print("circle")
-                # elif len(dst_pts) < 200 :
-                #     print("rectangle")
-                # print("done")
+                print("검출된 ", cnt, " 번째 특징점 개수 : ", len(dst_pts))
+                dist_db_circle = abs(len(dst_pts) - db_circle)
+                dist_db_rectangle = abs(len(dst_pts) - db_rectangle)
+                dist_db_triangle = abs(len(dst_pts) - db_triangle)
+
+                print(dist_db_circle, dist_db_rectangle, dist_db_triangle)
+
+                which_shape = 0
+                if len(good_matches) > MIN_MATCH * 5:
+                    if dist_db_circle < dist_db_rectangle and dist_db_circle < dist_db_triangle:
+                        count_circles += 1
+                        which_shape = 0
+                        print("circle")
+                    elif dist_db_rectangle < dist_db_triangle and dist_db_rectangle < dist_db_circle :
+                        count_rectangles += 1
+                        which_shape = 1
+                        print("rectangle")
+                    else :
+                        count_triangles += 1
+                        which_shape = 2
+                        print("triangle")
 
                 for i in range(len(dst_pts)):  ###### roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어준다.
                     if len(good_matches) > MIN_MATCH * 5 :
-#                        res = cv2.circle(frame, tuple(dst_pts[i]), 3, colors[roi_list.index(roi)], -1)
-                        res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[roi_list.index(roi)]), -1)
+                        # res = cv2.circle(frame, tuple(dst_pts[i]), 3, colors[roi_list.index(roi)], -1)
+                        res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[which_shape]), -1)
 
                 '''
                 if matches is not None:
@@ -98,6 +126,9 @@ def matching(factor) :
                 #res = cv2.drawMatches(roi, kp1, frame, kp2, good, res, None, flags=2)
                 cnt += 1
             cap_count = 2
+        cv2.putText(res, "circles : " + str(count_circles), (500, 30), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
+        cv2.putText(res, "rectangles : " + str(count_rectangles), (500, 70), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
+        cv2.putText(res, "triangles : " + str(count_triangles), (500, 110), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
         cv2.imshow('Feature Matching', res)
         cv2.waitKey(1)
         #cv2.destroyAllWindows()
@@ -139,7 +170,7 @@ def main():
     for i in range(len(roi_list)):
         cornerHarris(roi_list[i], i)
         # _, des = orb.detectAndCompute(roi_list[i], None)
-        # model_feature_descriptors.append(des)
+
 
     matching(0.7)
 

@@ -1,4 +1,5 @@
 {
-  'circle' :,
-  'rectangle' : ,
+  "circle" : 160,
+  "rectangle" : 100,
+  "triangle" : 50
 }
