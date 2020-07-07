@@ -4,11 +4,12 @@ import random
 
 roi_list = list()
 model_feature_descriptors = [] # 특징벡터를 저장하는 배열
-model_img = cv2.imread("4.png")
+#model_img = cv2.imread("4.png")
 # model_img = cv2.GaussianBlur(model_img, (5, 5), 0)
-model_img = cv2.resize(model_img, dsize=(480, 640), interpolation=cv2.INTER_AREA)
-video_path = "4.mp4"
+#model_img = cv2.resize(model_img, dsize=(480, 640), interpolation=cv2.INTER_AREA)
+video_path = "test10.mp4"
 cap = cv2.VideoCapture(video_path)
+_, model_img = cap.read()
 MIN_MATCH = 1
 dst_pts = []
 shape = []
@@ -16,7 +17,7 @@ colors = [(0,0,255), (0,255,0), (255,0,0), (255,255,0), (100,0,100), (200,200,20
 cap_count = 0
 cap_count_list = []
 
-num_features = 3500
+num_features = 2000
 
 
 # img1 = model_img
@@ -77,8 +78,11 @@ def matching(factor) :
 
                 flann = cv2.FlannBasedMatcher(index_params, search_params)
                 matches = flann.knnMatch(des1, des2, k=2)
+                print("!!!!!!!!!!!!!")
+
                 good_matches = [m[0] for m in matches \
                                 if len(m) == 2 and m[0].distance < m[1].distance * ratio]
+                print(good_matches)
                 if len(good_matches) > MIN_MATCH * 3:
                     dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches])  # 매칭시켜야 하는 물체의 좌표
 
