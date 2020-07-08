@@ -1,17 +1,17 @@
 {
   "락토핏" : {
-    "min" : 100,
+    "min" : 150,
     "max" : 250},
 
   "book" : {
     "min" : 400,
-    "max" : 550},
+    "max" : 750},
 
   "coupon" : {
     "min" : 3,
-    "max" : 10},
+    "max" : 60},
 
   "chess_board" : {
-    "min" : 20,
-    "max" : 60}
+    "min" : 70,
+    "max" : 130}
 }

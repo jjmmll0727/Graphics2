@@ -1,12 +1,8 @@
 import cv2, numpy as np
-import random
-## 푸시 다시할라고 추가함
 
 roi_list = list()
 model_feature_descriptors = [] # 특징벡터를 저장하는 배열
-#model_img = cv2.imread("4.png")
-# model_img = cv2.GaussianBlur(model_img, (5, 5), 0)
-#model_img = cv2.resize(model_img, dsize=(480, 640), interpolation=cv2.INTER_AREA)
+
 video_path = "test15.mp4"
 cap = cv2.VideoCapture(video_path)
 _, model_img = cap.read()
@@ -20,18 +16,18 @@ cap_count_list = []
 
 num_features = 3500
 
+# db에서 값 읽어옴 (좋은 특징점 개수가 각 물체별로 대충 몇개씩인지 적어둠)
 def read_data():
     import json
     with open("data.json", "rt", encoding='UTF-8') as f:
         ret = json.load(f)
         return ret
 
-def get_model_feature_descriptor():
+# roi를 드래그로 지정해서 좌표로 던지는 부분
+def get_roi_info():
     try:
         rect = cv2.selectROI('model_img', model_img, fromCenter=False, showCrosshair=False)
         print("rect : ", rect)
-        #   rect :  (138, 55, 162, 126)
-        tracker = cv2.TrackerMOSSE_create()
         roi = model_img[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
         roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         print(len(roi))
@@ -39,7 +35,9 @@ def get_model_feature_descriptor():
     except:
         return []           # 아무것도 리턴 안돼서 len(roi)가 0이라 roi 지정 종료
 
+# 실제 매칭의 모든 연산을 담당하는 부분
 def matching(factor) :
+    # <-- db에서 읽어들인 물체별 특징점 갯수의 최대/최소값들을 저장
     data = read_data()
     db_lactofit_min = data['락토핏']['min']
     db_lactofit_max = data['락토핏']['max']
@@ -49,7 +47,9 @@ def matching(factor) :
     db_coupon_max = data['coupon']['max']
     db_chessboard_min = data['chess_board']['min']
     db_chessboard_max = data['chess_board']['max']
+    # db 읽기 완료 -->
 
+    # orb 알고리즘 사용
     orb = cv2.ORB_create(num_features)
     index_params = dict(algorithm=6,
                         table_number=20,
@@ -63,7 +63,6 @@ def matching(factor) :
     while cap.isOpened():
         ret, frame = cap.read()
         res = frame
-        # frame = cv2.GaussianBlur(frame, (5, 5), 0)
         if roi_list[0] is None:  # 등록된 이미지 없음, 카메라 바이패스
             res = frame
         else :
@@ -78,59 +77,47 @@ def matching(factor) :
             print("---------------------------------------")
 
             for roi in roi_list:
-
                 print(cnt)
+                ### <--- roi에서 뽑은 특징점과 영상전체에서 뽑은 특징점들 중 매칭되는것들 추출
                 res = frame
-                kp1, des1 = orb.detectAndCompute(roi, None)
-                kp2, des2 = orb.detectAndCompute(frame, None)
-
-                ratio = 0.75
+                kp1, des1 = orb.detectAndCompute(roi, None)     # roi에서 뽑은 특징점들
+                kp2, des2 = orb.detectAndCompute(frame, None)   # 영상전체에서 뽑은 특징점들
 
                 flann = cv2.FlannBasedMatcher(index_params, search_params)
                 matches = flann.knnMatch(des1, des2, k=2)
 
-
                 good_matches = [m[0] for m in matches \
-                                if len(m) == 2 and m[0].distance < m[1].distance * ratio]
-                # print(len(good_matches))
+                                if len(m) == 2 and m[0].distance < m[1].distance * factor]
                 if len(good_matches) > MIN_MATCH * 3:
                     dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches])  # 매칭시켜야 하는 물체의 좌표
 
+                ### 매칭점 추출 완료 --->
+
                 mean_point = np.mean(dst_pts, axis=0)
-                # mean_y = np.mean(dst_pts, axis=1)
 
-                ## 검출된 특징점 갯수가 일정 숫자 이상이면(지금은 3) 도형정보(shape 배열)랑 매칭해서 도형정보 기
+                ## 검출된 특징점 갯수가 일정 숫자 이상이면(지금은 3) 도형정보(shape 배열)랑 매칭해서 도형정보 기술
                 print("검출된 ", cnt, " 번째 특징점 개수 : ", len(dst_pts))
-                '''
-                dist_db_circle = abs(len(dst_pts) - db_circle)
-                dist_db_rectangle1 = abs(len(dst_pts) - db_rectangle1)
-                dist_db_rectangle2 = abs(len(dst_pts) - db_rectangle2)
-                dist_db_triangle = abs(len(dst_pts) - db_triangle)
-                '''
-                #print(dist_db_circle, dist_db_rectangle1, dist_db_rectangle2, dist_db_triangle)
-
-                which_shape = 0
 
                 if len(good_matches) > MIN_MATCH * 5:
                     if len(dst_pts) >= db_lactofit_min and len(dst_pts) <= db_lactofit_max:
                         count_lactofit += 1
-                        which_shape = 0
                         print("락토핏")
                     elif len(dst_pts) >= db_book_min and len(dst_pts) <= db_book_max:
                         count_book += 1
-                        which_shape = 0
                         print("book")
                     elif len(dst_pts) >= db_coupon_min and len(dst_pts) <= db_coupon_max:
                         count_coupon += 1
-                        which_shape = 0
                         print("coupon")
                     elif len(dst_pts) >= db_chessboard_min and len(dst_pts) <= db_chessboard_max:
                         count_chessboard += 1
-                        which_shape = 0
                         print("chess_board")
 
-
-                '''
+                ''' 삼각형/사각형/원 (도형)으로 검출내용 표시할때 쓰려고 만든 코드
+                    dist_db_circle = abs(len(dst_pts) - db_circle)
+                    dist_db_rectangle1 = abs(len(dst_pts) - db_rectangle1)
+                    dist_db_rectangle2 = abs(len(dst_pts) - db_rectangle2)
+                    dist_db_triangle = abs(len(dst_pts) - db_triangle)
+                    which_shape = 0
                     if dist_db_circle < dist_db_rectangle1 and dist_db_circle < dist_db_triangle:
                         count_circles += 1
                         which_shape = 0
@@ -145,78 +132,37 @@ def matching(factor) :
                         print("triangle")
                 '''
 
-                for i in range(len(dst_pts)):  ###### roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어준다.
+                for i in range(len(dst_pts)):  # roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어줌
                     if len(good_matches) > MIN_MATCH * 5 :
-                        #res = cv2.circle(frame, tuple(dst_pts[i]), 3, colors[roi_list.index(roi)], -1)
                         #res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[which_shape]), -1)
                         res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[roi_list.index(roi)]), -1)
-
-                '''
-                if matches is not None:
-                    for m, n in matches:
-                        if m.distance < factor*n.distance:
-                            good.append(m)
-                '''
-                #res = cv2.drawMatches(roi, kp1, frame, kp2, good, res, None, flags=2)
                 cnt += 1
             cap_count = 2
+
+        # <-- 우측 상단에 검출된 물체 개수 적고 영상 출력
         cv2.putText(res, "LactoFit : " + str(count_lactofit), (450, 30), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
         cv2.putText(res, "book : " + str(count_book), (450, 70), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
         cv2.putText(res, "coupon : " + str(count_coupon), (450, 110), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
         cv2.putText(res, "chess_board : " + str(count_chessboard), (450, 150), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
         cv2.imshow('Feature Matching', res)
         cv2.waitKey(1)
-        #cv2.destroyAllWindows()
-'''
-def cornerHarris(roi_input, i) :
-    roi = roi_input
-    roi = np.float32(roi)
-    dst = cv2.cornerHarris(roi, 3, 5, 0.07)
-    dst = cv2.dilate(dst, None)
-    print("코너 갯수 : ", len(dst))     # 코너갯수로 물체 인식할 수도 있지 않을까..
+        # 영상 출력 끝 -->
 
-    ###### 검출된 코너 갯수에 따라서 다른 물체로 인식하도록 ####
-    # shape 벡터에 순서대로 도형이름 저장
-    # roi벡터랑 shape벡터랑 물체가 들어있는 순서가 똑같으니까
-    # roi[i]에서 검출된 물체의 모양은 shape[i] 모양임.
-    # 일단은 대충만 만든거라 모델영상 바꾸고 코너갯수 다시 찍어본 다음 조건문 수정해야함.
-    if len(dst) >= 200 :
-        shape.append("menu")
-    elif len(dst) > 100 and len(dst) < 200 :
-        shape.append("coupon")
-    else :
-        shape.append(" ")
-'''
+        #cv2.destroyAllWindows()
+
 
 def main():
     cnt = 0
     while True:
-        roi = get_model_feature_descriptor()
+        roi = get_roi_info()
         if len(roi) != 0 :
             roi_list.append(roi)
             cnt += 1
         else :
             break
-
     print("number of roi : ", cnt)
 
-    # orb = cv2.ORB_create(num_features)
-    # roi 영상에 코너가 몇개 있는지 검출
-    '''
-    for i in range(len(roi_list)):
-        cornerHarris(roi_list[i], i)
-        # _, des = orb.detectAndCompute(roi_list[i], None)
-        '''
-
-    matching(0.7)
+    matching(0.75)
 
 if __name__=="__main__":
     main()
-
-
-
-################################################
-# 1. 도형정보 검출할 수 있는 꼼수(해리스코너) 추가
-# 2. 코너갯수에 따라서 다른 도형(물체)로 인식
-# 3. 우측 상단에 갯수만 쓰면 됨
-#################################################
