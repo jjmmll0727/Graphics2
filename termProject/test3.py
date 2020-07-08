@@ -7,21 +7,22 @@ model_feature_descriptors = [] # 특징벡터를 저장하는 배열
 #model_img = cv2.imread("4.png")
 # model_img = cv2.GaussianBlur(model_img, (5, 5), 0)
 #model_img = cv2.resize(model_img, dsize=(480, 640), interpolation=cv2.INTER_AREA)
-video_path = "test10.mp4"
+video_path = "test15.mp4"
 cap = cv2.VideoCapture(video_path)
 _, model_img = cap.read()
 MIN_MATCH = 1
 dst_pts = []
 shape = []
 colors = [(0,0,255), (0,255,0), (255,0,0), (255,255,0), (100,0,100), (200,200,200), (0,0,50)]
+
 cap_count = 0
 cap_count_list = []
 
-num_features = 2000
+num_features = 3500
 
 def read_data():
     import json
-    with open("data.json", "r") as f:
+    with open("data.json", "rt", encoding='UTF-8') as f:
         ret = json.load(f)
         return ret
 
@@ -40,16 +41,21 @@ def get_model_feature_descriptor():
 
 def matching(factor) :
     data = read_data()
-    db_circle = data['circle']
-    db_rectangle = data['rectangle']
-    db_triangle = data['triangle']
+    db_lactofit_min = data['락토핏']['min']
+    db_lactofit_max = data['락토핏']['max']
+    db_book_min = data['book']['min']
+    db_book_max = data['book']['max']
+    db_coupon_min = data['coupon']['min']
+    db_coupon_max = data['coupon']['max']
+    db_chessboard_min = data['chess_board']['min']
+    db_chessboard_max = data['chess_board']['max']
 
     orb = cv2.ORB_create(num_features)
     index_params = dict(algorithm=6,
                         table_number=20,
                         key_size=20,
                         multi_probe_level=2)
-    search_params = dict(checks=100)
+    search_params = dict(checks=60)
     global dst_pts
     global cap_count
     global cap_count_list
@@ -65,10 +71,14 @@ def matching(factor) :
             cnt = 0            # for문을 roi로 돌리길래 인덱스 벡터 cnt
             #model_color = model_color + 1
 
-            count_circles = 0
-            count_rectangles = 0
-            count_triangles = 0
+            count_lactofit = 0
+            count_book = 0
+            count_coupon = 0
+            count_chessboard = 0
+            print("---------------------------------------")
+
             for roi in roi_list:
+
                 print(cnt)
                 res = frame
                 kp1, des1 = orb.detectAndCompute(roi, None)
@@ -78,7 +88,7 @@ def matching(factor) :
 
                 flann = cv2.FlannBasedMatcher(index_params, search_params)
                 matches = flann.knnMatch(des1, des2, k=2)
-                print("!!!!!!!!!!!!!")
+
 
                 good_matches = [m[0] for m in matches \
                                 if len(m) == 2 and m[0].distance < m[1].distance * ratio]
@@ -91,19 +101,41 @@ def matching(factor) :
 
                 ## 검출된 특징점 갯수가 일정 숫자 이상이면(지금은 3) 도형정보(shape 배열)랑 매칭해서 도형정보 기
                 print("검출된 ", cnt, " 번째 특징점 개수 : ", len(dst_pts))
+                '''
                 dist_db_circle = abs(len(dst_pts) - db_circle)
-                dist_db_rectangle = abs(len(dst_pts) - db_rectangle)
+                dist_db_rectangle1 = abs(len(dst_pts) - db_rectangle1)
+                dist_db_rectangle2 = abs(len(dst_pts) - db_rectangle2)
                 dist_db_triangle = abs(len(dst_pts) - db_triangle)
-
-                print(dist_db_circle, dist_db_rectangle, dist_db_triangle)
+                '''
+                #print(dist_db_circle, dist_db_rectangle1, dist_db_rectangle2, dist_db_triangle)
 
                 which_shape = 0
+
                 if len(good_matches) > MIN_MATCH * 5:
-                    if dist_db_circle < dist_db_rectangle and dist_db_circle < dist_db_triangle:
+                    if len(dst_pts) >= db_lactofit_min and len(dst_pts) <= db_lactofit_max:
+                        count_lactofit += 1
+                        which_shape = 0
+                        print("락토핏")
+                    elif len(dst_pts) >= db_book_min and len(dst_pts) <= db_book_max:
+                        count_book += 1
+                        which_shape = 0
+                        print("book")
+                    elif len(dst_pts) >= db_coupon_min and len(dst_pts) <= db_coupon_max:
+                        count_coupon += 1
+                        which_shape = 0
+                        print("coupon")
+                    elif len(dst_pts) >= db_chessboard_min and len(dst_pts) <= db_chessboard_max:
+                        count_chessboard += 1
+                        which_shape = 0
+                        print("chess_board")
+
+
+                '''
+                    if dist_db_circle < dist_db_rectangle1 and dist_db_circle < dist_db_triangle:
                         count_circles += 1
                         which_shape = 0
                         print("circle")
-                    elif dist_db_rectangle < dist_db_triangle and dist_db_rectangle < dist_db_circle :
+                    elif dist_db_rectangle1 < dist_db_triangle and dist_db_rectangle1 < dist_db_circle :
                         count_rectangles += 1
                         which_shape = 1
                         print("rectangle")
@@ -111,11 +143,13 @@ def matching(factor) :
                         count_triangles += 1
                         which_shape = 2
                         print("triangle")
+                '''
 
                 for i in range(len(dst_pts)):  ###### roi와 cap간의 특징벡터 매칭을 통해 나온 cap의 좌표(dst_pts)를 cap영상에 원으로 찍어준다.
                     if len(good_matches) > MIN_MATCH * 5 :
-                        # res = cv2.circle(frame, tuple(dst_pts[i]), 3, colors[roi_list.index(roi)], -1)
-                        res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[which_shape]), -1)
+                        #res = cv2.circle(frame, tuple(dst_pts[i]), 3, colors[roi_list.index(roi)], -1)
+                        #res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[which_shape]), -1)
+                        res = cv2.circle(frame, (int(mean_point[0]), int(mean_point[1])), 10, (colors[roi_list.index(roi)]), -1)
 
                 '''
                 if matches is not None:
@@ -126,13 +160,14 @@ def matching(factor) :
                 #res = cv2.drawMatches(roi, kp1, frame, kp2, good, res, None, flags=2)
                 cnt += 1
             cap_count = 2
-        cv2.putText(res, "circles : " + str(count_circles), (500, 30), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
-        cv2.putText(res, "rectangles : " + str(count_rectangles), (500, 70), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
-        cv2.putText(res, "triangles : " + str(count_triangles), (500, 110), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
+        cv2.putText(res, "LactoFit : " + str(count_lactofit), (450, 30), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
+        cv2.putText(res, "book : " + str(count_book), (450, 70), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
+        cv2.putText(res, "coupon : " + str(count_coupon), (450, 110), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
+        cv2.putText(res, "chess_board : " + str(count_chessboard), (450, 150), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
         cv2.imshow('Feature Matching', res)
         cv2.waitKey(1)
         #cv2.destroyAllWindows()
-
+'''
 def cornerHarris(roi_input, i) :
     roi = roi_input
     roi = np.float32(roi)
@@ -151,7 +186,7 @@ def cornerHarris(roi_input, i) :
         shape.append("coupon")
     else :
         shape.append(" ")
-
+'''
 
 def main():
     cnt = 0
@@ -167,10 +202,11 @@ def main():
 
     # orb = cv2.ORB_create(num_features)
     # roi 영상에 코너가 몇개 있는지 검출
+    '''
     for i in range(len(roi_list)):
         cornerHarris(roi_list[i], i)
         # _, des = orb.detectAndCompute(roi_list[i], None)
-
+        '''
 
     matching(0.7)
 

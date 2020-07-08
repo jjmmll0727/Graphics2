@@ -1,5 +1,17 @@
 {
-  "circle" : 160,
-  "rectangle" : 100,
-  "triangle" : 50
+  "락토핏" : {
+    "min" : 100,
+    "max" : 250},
+
+  "book" : {
+    "min" : 400,
+    "max" : 550},
+
+  "coupon" : {
+    "min" : 3,
+    "max" : 10},
+
+  "chess_board" : {
+    "min" : 20,
+    "max" : 60}
 }
