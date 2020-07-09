@@ -19,7 +19,7 @@ num_features = 3500
 # db에서 값 읽어옴 (좋은 특징점 개수가 각 물체별로 대충 몇개씩인지 적어둠)
 def read_data():
     import json
-    with open("data2.json", "rt", encoding='UTF-8') as f:
+    with open("data.json", "rt", encoding='UTF-8') as f:
         ret = json.load(f)
         return ret
 

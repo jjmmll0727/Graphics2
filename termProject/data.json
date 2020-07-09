@@ -1,17 +1,17 @@
 {
-  "락토핏" : {
-    "min" : 150,
-    "max" : 250},
-
-  "book" : {
-    "min" : 400,
-    "max" : 750},
+  "tony" : {
+    "min" : 116,
+    "max" : 220},
 
   "coupon" : {
-    "min" : 3,
-    "max" : 60},
+    "min" : 5,
+    "max" : 30},
 
-  "chess_board" : {
-    "min" : 70,
-    "max" : 130}
+  "charm" : {
+    "min" : 221,
+    "max" : 500},
+
+  "coffee" : {
+    "min" : 31,
+    "max" : 115}
 }
