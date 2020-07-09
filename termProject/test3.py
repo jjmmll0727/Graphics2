@@ -3,7 +3,7 @@ import cv2, numpy as np
 roi_list = list()
 model_feature_descriptors = [] # 특징벡터를 저장하는 배열
 
-video_path = "test15.mp4"
+video_path = "16.mp4"
 cap = cv2.VideoCapture(video_path)
 _, model_img = cap.read()
 MIN_MATCH = 1
@@ -19,7 +19,7 @@ num_features = 3500
 # db에서 값 읽어옴 (좋은 특징점 개수가 각 물체별로 대충 몇개씩인지 적어둠)
 def read_data():
     import json
-    with open("data.json", "rt", encoding='UTF-8') as f:
+    with open("data2.json", "rt", encoding='UTF-8') as f:
         ret = json.load(f)
         return ret
 
@@ -39,14 +39,14 @@ def get_roi_info():
 def matching(factor) :
     # <-- db에서 읽어들인 물체별 특징점 갯수의 최대/최소값들을 저장
     data = read_data()
-    db_lactofit_min = data['락토핏']['min']
-    db_lactofit_max = data['락토핏']['max']
-    db_book_min = data['book']['min']
-    db_book_max = data['book']['max']
-    db_coupon_min = data['coupon']['min']
-    db_coupon_max = data['coupon']['max']
-    db_chessboard_min = data['chess_board']['min']
-    db_chessboard_max = data['chess_board']['max']
+    db_lactofit_min = data['tony']['min']
+    db_lactofit_max = data['tony']['max']
+    db_book_min = data['coupon']['min']
+    db_book_max = data['coupon']['max']
+    db_coupon_min = data['charm']['min']
+    db_coupon_max = data['charm']['max']
+    db_chessboard_min = data['coffee']['min']
+    db_chessboard_max = data['coffee']['max']
     # db 읽기 완료 -->
 
     # orb 알고리즘 사용
@@ -88,6 +88,7 @@ def matching(factor) :
 
                 good_matches = [m[0] for m in matches \
                                 if len(m) == 2 and m[0].distance < m[1].distance * factor]
+                dst_pts = []
                 if len(good_matches) > MIN_MATCH * 3:
                     dst_pts = np.float32([kp2[m.trainIdx].pt for m in good_matches])  # 매칭시켜야 하는 물체의 좌표
 
@@ -100,17 +101,17 @@ def matching(factor) :
 
                 if len(good_matches) > MIN_MATCH * 5:
                     if len(dst_pts) >= db_lactofit_min and len(dst_pts) <= db_lactofit_max:
-                        count_lactofit += 1
-                        print("락토핏")
+                        count_lactofit = 1
+                        print("tony")
                     elif len(dst_pts) >= db_book_min and len(dst_pts) <= db_book_max:
-                        count_book += 1
-                        print("book")
-                    elif len(dst_pts) >= db_coupon_min and len(dst_pts) <= db_coupon_max:
-                        count_coupon += 1
+                        count_book = 1
                         print("coupon")
+                    elif len(dst_pts) >= db_coupon_min and len(dst_pts) <= db_coupon_max:
+                        count_coupon = 1
+                        print("charm")
                     elif len(dst_pts) >= db_chessboard_min and len(dst_pts) <= db_chessboard_max:
-                        count_chessboard += 1
-                        print("chess_board")
+                        count_chessboard = 1
+                        print("coffee")
 
                 ''' 삼각형/사각형/원 (도형)으로 검출내용 표시할때 쓰려고 만든 코드
                     dist_db_circle = abs(len(dst_pts) - db_circle)
@@ -140,10 +141,10 @@ def matching(factor) :
             cap_count = 2
 
         # <-- 우측 상단에 검출된 물체 개수 적고 영상 출력
-        cv2.putText(res, "LactoFit : " + str(count_lactofit), (450, 30), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
-        cv2.putText(res, "book : " + str(count_book), (450, 70), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
-        cv2.putText(res, "coupon : " + str(count_coupon), (450, 110), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
-        cv2.putText(res, "chess_board : " + str(count_chessboard), (450, 150), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
+        cv2.putText(res, "tony : " + str(count_lactofit), (450, 30), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
+        cv2.putText(res, "coupon : " + str(count_book), (450, 70), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
+        cv2.putText(res, "charm : " + str(count_coupon), (450, 110), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
+        cv2.putText(res, "coffee : " + str(count_chessboard), (450, 150), cv2.FONT_HERSHEY_PLAIN, 1.7, [255, 255, 255], 2)
         cv2.imshow('Feature Matching', res)
         cv2.waitKey(1)
         # 영상 출력 끝 -->
